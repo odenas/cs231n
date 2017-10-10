@@ -99,9 +99,15 @@ def svm_loss_vectorized(W, X, y, reg):
     # to reuse some of the intermediate values that you used to compute the   #
     # loss.                                                                   #
     ###########################################################################
-    S1 = (scores - correct_class_scores + 1) > 0
-    S1[np.arange(num_train), y] = -(S1.sum(axis=1) - 1)
-    dW = (X.T.dot(S1) / num_train) + (2 * reg * W)
+    contributing_elements = ((scores - correct_class_scores + 1) > 0).astype('int')  # N x C
+    assert np.all(contributing_elements.sum(axis=1) > 0)  # the correct class is delta (i.e., > 0)
+    correct_class_contrib = contributing_elements.sum(axis=1) - 1
+
+    # at the wrong class contribution is 1, at correct class contribution is -# of positive elements
+    contributing_elements[np.arange(num_train), y] = -correct_class_contrib
+
+    dW = X.T.dot(contributing_elements)  # D x C
+    dW = (dW / float(num_train)) + (2 * reg * W)
 
     ###########################################################################
     #                                                       END OF YOUR CODE  #
